@@ -52,6 +52,7 @@ def choose_files(directory: str) -> None:
         if files.endswith(".mp3"):
             realdir = os.path.realpath(files)
             audiofile = mutagen.File(realdir)
+            return audiofile
             extract_tags(audiofile)
 
 
