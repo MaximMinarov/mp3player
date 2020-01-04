@@ -14,9 +14,8 @@ def write_tags() -> None:
 
 
 def extract_tags(audiofile: str) -> None:
-    '''Функция получает путь к MP3-файлу, извлекает из него теги, наполняет ими
-       словарь 'song_tags', который передает в словарь 'all_tags' и вызывает
-       функцию 'write_tags'.'''
+    '''Функция получает путь к MP3-файлу, извлекает из него теги и наполняет ими
+       словарь 'song_tags', который передает в словарь 'all_tags'.'''
     song_tags = {}
     song_tags['Path to the File']=audiofile
     song_title = audiofile.tags.getall('TIT2')
@@ -45,9 +44,9 @@ def extract_tags(audiofile: str) -> None:
     write_tags()
 
 
-def choose_files(directory: str) -> None:
-    '''Функция получает путь к директории, отбирает MP3-файлы и вызывает
-       функцию 'extract_tags'.'''
+def choose_files(directory: str) -> str:
+    '''Функция получает путь к директории, отбирает MP3-файлы, возвращает
+       возвращает пути к ним.'''
     for files in os.listdir(directory):
         if files.endswith(".mp3"):
             realdir = os.path.realpath(files)
@@ -58,14 +57,14 @@ def choose_files(directory: str) -> None:
 
 def choose_directory(event) -> str:
     '''Функция открывает диалоговое окно выбора директории с MP3-файлами,
-       возвращает путь к ней и вызывает функию 'choose_files'.'''
+       возвращает путь к ней.'''
     directory = askdirectory()
     os.chdir(directory)
     return directory
     choose_files(directory)
 
 
-choosedirectory=Button(root,text='Choose Directory')
+choosedirectory=Button(root, text = 'Choose Directory')
 choosedirectory.pack()
 choosedirectory.bind("<Button-1>", choose_directory)
 
