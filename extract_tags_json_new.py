@@ -72,7 +72,8 @@ def choose_files(directory: str) -> None:
        применяет extract_tags к каждому из них.'''
     for file in os.listdir(directory):
         if file.endswith(".mp3"):
-            all_tags[file] = extract_tags(os.path.realpath(file))
+            path = os.path.realpath(file)
+            all_tags[path] = extract_tags(path)
     write_tags()
 
 
@@ -85,7 +86,7 @@ def choose_directory(event) -> None:
     exit()
 
 
-choosedirectory = Button(root, text='Choose Directory')
+choosedirectory = Button(root, text = 'Choose Directory')
 choosedirectory.pack()
 choosedirectory.bind("<Button-1>", choose_directory)
 
