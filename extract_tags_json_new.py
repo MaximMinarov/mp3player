@@ -12,7 +12,7 @@ from tkinter.filedialog import askdirectory
 
 con = sqlite3.connect('tagsdatabase.db')
 cur = con.cursor()
-cur.execute('''CREATE TABLE IF NOT EXISTS tags_db(Song_Path TEXT,
+cur.execute('''CREATE TABLE IF NOT EXISTS tags_db(File_Path TEXT,
                                                   Song_Title TEXT,
                                                   Album_Title TEXT,
                                                   Song_Artist TEXT,
@@ -22,8 +22,8 @@ cur.execute('''CREATE TABLE IF NOT EXISTS tags_db(Song_Path TEXT,
                                                   Length REAL,
                                                   Bitrate INTEGER)''')
 
-cur.execute('''CREATE TABLE IF NOT EXISTS covers_db(Cover_Path TEXT,
-                                                    Song_Title TEXT,
+cur.execute('''CREATE TABLE IF NOT EXISTS covers_db(File_Path TEXT,
+                                                    Cover_Path TEXT,
                                                     Album_Title TEXT,
                                                     Album_Artist TEXT,
                                                     Year_of_Publishing INTEGER)''')
@@ -36,15 +36,29 @@ root = Tk()
 root.minsize(300, 300)
 
 
-def extract_cover(path: str) -> None:
+def extract_cover(path: str, album_title: str, album_artist: str, year_of_publishing:str) -> None:
     '''Извлекает обложку из файла.'''
     music = ID3(path)
     data = music.getall('APIC')[0].data
     cover_name_f = path.translate(ban)
     cover_name_s = cover_name_f.replace('.mp3', '')
+    cover_path = folder_path + '/Covers/' + cover_name_s + '.png'
 
-    with open(folder_path + '/Covers/' + cover_name_s + '.png', 'wb') as cover:
-        cover.write(data)
+    record_one = cur.execute('SELECT * FROM covers_db WHERE Album_Title=? AND Album_Artist=? AND Year_of_Publishing=?', (album_title, album_artist, year_of_publishing))
+    duplicate_one = record_one.fetchall()
+
+    record_two = cur.execute('SELECT * FROM covers_db WHERE File_Path=?', (path, ))
+    duplicate_two = record_two.fetchall()
+
+    if not duplicate_one:
+        cur.execute('INSERT INTO covers_db VALUES(?, ?, ?, ?, ?)', (path, cover_path, album_title, album_artist, year_of_publishing))
+        with open(cover_path, 'wb') as cover:
+            cover.write(data)
+
+    if duplicate_two:
+        cur.execute('UPDATE covers_db SET Cover_Path=?, Album_Title=?, Album_Artist=?, Year_of_Publishing=? WHERE File_Path=?', (cover_path, album_title, album_artist, year_of_publishing, path))
+
+    con.commit()
 
 
 def extract_tags(path: str) -> str:
@@ -86,17 +100,17 @@ def extract_tags(path: str) -> str:
 
     song_tags = (path, song_title, album_title, song_artist, album_artist, year_of_publishing, track_number, length, bitrate)
 
-    record_f = cur.execute('SELECT * FROM tags_db WHERE Song_Path=?', (path, ))
-    record = record_f.fetchall()
+    record = cur.execute('SELECT * FROM tags_db WHERE File_Path=?', (path, ))
+    duplicate = record.fetchall()
 
-    if not record:
+    if not duplicate:
         cur.execute('INSERT INTO tags_db VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)', song_tags)
     else:
-        cur.execute('UPDATE tags_db SET Song_Title=?, Album_Title=?, Song_Artist=?, Album_Artist=?, Year_of_Publishing=?, Track_Number=?, Length=?, Bitrate=?  WHERE Song_Path=?', (song_title, album_title, song_artist, album_artist, year_of_publishing, track_number, length, bitrate, path))
+        cur.execute('UPDATE tags_db SET Song_Title=?, Album_Title=?, Song_Artist=?, Album_Artist=?, Year_of_Publishing=?, Track_Number=?, Length=?, Bitrate=?  WHERE File_Path=?', (song_title, album_title, song_artist, album_artist, year_of_publishing, track_number, length, bitrate, path))
 
     con.commit()
 
-    extract_cover(path)
+    extract_cover(path, album_title, album_artist, year_of_publishing)
 
 
 def choose_files(directory: str) -> None:
