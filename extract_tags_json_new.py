@@ -10,6 +10,7 @@ from mutagen.id3 import ID3
 from tkinter import *
 from tkinter.filedialog import askdirectory
 from PIL import ImageTk
+from PIL import Image
 
 con = sqlite3.connect('tagsdatabase.db')
 cur = con.cursor()
@@ -37,16 +38,21 @@ root = Tk()
 root.minsize(650, 650)
 
 
+def resize(filename: str) -> None:
+    '''Изменяет размер обложки'''
+    img = Image.open(filename)
+    img.thumbnail((120, 120), Image.ANTIALIAS)
+    img.save(filename)
+
+
 def extract_cover(path: str, album_title: str, album_artist: str, year_of_publishing:str) -> None:
-    '''Извлекает обложку из файла.'''
+    '''Извлекает обложку из файла'''
 
     music = ID3(path)
     data = music.getall('APIC')[0].data
+    cover_path = False
 
     if data:
-        cover_name_f = path.translate(ban)
-        cover_name_s = cover_name_f.replace('.mp3', '')
-        cover_path = folder_path + '/Covers/' + cover_name_s + '.png'
 
         record_one = cur.execute('SELECT * FROM covers_db WHERE Album_Title=? AND Album_Artist=? AND Year_of_Publishing=?', (album_title, album_artist, year_of_publishing))
         duplicate_one = record_one.fetchall()
@@ -55,6 +61,9 @@ def extract_cover(path: str, album_title: str, album_artist: str, year_of_publis
         duplicate_two = record_two.fetchall()
 
         if not duplicate_one:
+            cover_name_f = path.translate(ban)
+            cover_name_s = cover_name_f.replace('.mp3', '')
+            cover_path = folder_path + '/Covers/' + cover_name_s + '.png'
             cur.execute('INSERT INTO covers_db VALUES(?, ?, ?, ?, ?)', (path, cover_path, album_title, album_artist, year_of_publishing))
             with open(cover_path, 'wb') as cover:
                 cover.write(data)
@@ -64,9 +73,12 @@ def extract_cover(path: str, album_title: str, album_artist: str, year_of_publis
 
         con.commit()
 
+    if cover_path:
+        resize(cover_path)
+
 
 def extract_tags(path: str) -> str:
-    '''Извлекает теги из файла и заполняет ими базу данных.'''
+    '''Извлекает теги из файла и заполняет ими базу данных'''
 
     audiofile = mutagen.File(path)
 
@@ -118,11 +130,12 @@ def extract_tags(path: str) -> str:
 
 
 def choose_files(directory: str) -> None:
-    '''Отбирает MP3-файлы из ввыбранной директории, применяет extract_tags к каждому из них.'''
+    '''Отбирает MP3-файлы из ввыбранной директории, применяет extract_tags к каждому из них'''
     for file in os.listdir(directory):
         if file.endswith('.mp3'):
             path = os.path.realpath(file)
             extract_tags(path)
+    create_albums()
     # con.close()
 
 
@@ -139,24 +152,45 @@ def create_list():
     pass
 
 
-def create_albums():
-    ''' '''
-    albums = []
+def create_albums() -> None:
+    '''Создает список альбомов'''
+    albums_list = []
 
-    for album_f in cur.execute('SELECT Cover_Path FROM covers_db'):
-        albums.append(album_f[0])
+    albums_f = cur.execute('SELECT Cover_Path FROM covers_db')
+    albums_s = albums_f.fetchall()
+    
+    if albums_s:
 
-    for album_s in albums:
+        number = len(albums_s)
+        xy = []
+        i = 1
+        x = 30
+        y = 30
 
-        image = ImageTk.PhotoImage(file = str(album_s))
+        while i <= number:
+            xy.append([x, y])
+            i = i + 1
+            x = x + 140
+            if i % 7 == 0:
+                x = 0
+                y = y + 50
 
-        album_button = Button(root,
-                              image = image,
-                              width = 120, height = 120,
-                              command = lambda: print('click'))
-        album_button.image = image
-        album_button.pack()
-        
+        for album in albums_s:
+            albums_list.append(album[0])
+
+        k = 0
+
+        for album_1 in albums_list:
+            image = ImageTk.PhotoImage(file = str(album_1))
+
+            album_button = Button(root,
+                                  image = image,
+                                  width = 120, height = 120,
+                                  command = lambda: print('click'))
+            album_button.image = image
+            album_button.place(x = (xy[k])[0], y = (xy[k])[1])
+            k = k + 1
+    
 
 create_albums()
 
