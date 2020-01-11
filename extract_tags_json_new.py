@@ -9,6 +9,7 @@ import sqlite3
 from mutagen.id3 import ID3
 from tkinter import *
 from tkinter.filedialog import askdirectory
+from PIL import ImageTk
 
 con = sqlite3.connect('tagsdatabase.db')
 cur = con.cursor()
@@ -33,32 +34,35 @@ ban = str.maketrans('', '', '\:')
 folder_path = os.path.dirname(__file__)
 
 root = Tk()
-root.minsize(300, 300)
+root.minsize(650, 650)
 
 
 def extract_cover(path: str, album_title: str, album_artist: str, year_of_publishing:str) -> None:
     '''Извлекает обложку из файла.'''
+
     music = ID3(path)
     data = music.getall('APIC')[0].data
-    cover_name_f = path.translate(ban)
-    cover_name_s = cover_name_f.replace('.mp3', '')
-    cover_path = folder_path + '/Covers/' + cover_name_s + '.png'
 
-    record_one = cur.execute('SELECT * FROM covers_db WHERE Album_Title=? AND Album_Artist=? AND Year_of_Publishing=?', (album_title, album_artist, year_of_publishing))
-    duplicate_one = record_one.fetchall()
+    if data:
+        cover_name_f = path.translate(ban)
+        cover_name_s = cover_name_f.replace('.mp3', '')
+        cover_path = folder_path + '/Covers/' + cover_name_s + '.png'
 
-    record_two = cur.execute('SELECT * FROM covers_db WHERE File_Path=?', (path, ))
-    duplicate_two = record_two.fetchall()
+        record_one = cur.execute('SELECT * FROM covers_db WHERE Album_Title=? AND Album_Artist=? AND Year_of_Publishing=?', (album_title, album_artist, year_of_publishing))
+        duplicate_one = record_one.fetchall()
 
-    if not duplicate_one:
-        cur.execute('INSERT INTO covers_db VALUES(?, ?, ?, ?, ?)', (path, cover_path, album_title, album_artist, year_of_publishing))
-        with open(cover_path, 'wb') as cover:
-            cover.write(data)
+        record_two = cur.execute('SELECT * FROM covers_db WHERE File_Path=?', (path, ))
+        duplicate_two = record_two.fetchall()
 
-    if duplicate_two:
-        cur.execute('UPDATE covers_db SET Cover_Path=?, Album_Title=?, Album_Artist=?, Year_of_Publishing=? WHERE File_Path=?', (cover_path, album_title, album_artist, year_of_publishing, path))
+        if not duplicate_one:
+            cur.execute('INSERT INTO covers_db VALUES(?, ?, ?, ?, ?)', (path, cover_path, album_title, album_artist, year_of_publishing))
+            with open(cover_path, 'wb') as cover:
+                cover.write(data)
 
-    con.commit()
+        if duplicate_two:
+            cur.execute('UPDATE covers_db SET Cover_Path=?, Album_Title=?, Album_Artist=?, Year_of_Publishing=? WHERE File_Path=?', (cover_path, album_title, album_artist, year_of_publishing, path))
+
+        con.commit()
 
 
 def extract_tags(path: str) -> str:
@@ -119,6 +123,7 @@ def choose_files(directory: str) -> None:
         if file.endswith('.mp3'):
             path = os.path.realpath(file)
             extract_tags(path)
+    # con.close()
 
 
 def choose_directory(event) -> None:
@@ -130,8 +135,33 @@ def choose_directory(event) -> None:
     # exit()
 
 
-choosedirectory = Button(root, text = 'Choose Directory')
-choosedirectory.pack()
-choosedirectory.bind('<Button-1>', choose_directory)
+def create_list():
+    pass
+
+
+def create_albums():
+    ''' '''
+    albums = []
+
+    for album_f in cur.execute('SELECT Cover_Path FROM covers_db'):
+        albums.append(album_f[0])
+
+    for album_s in albums:
+
+        image = ImageTk.PhotoImage(file = str(album_s))
+
+        album_button = Button(root,
+                              image = image,
+                              width = 120, height = 120,
+                              command = lambda: print('click'))
+        album_button.image = image
+        album_button.pack()
+        
+
+create_albums()
+
+choose_directory_button = Button(root, text = 'Choose Directory')
+choose_directory_button.pack()
+choose_directory_button.bind('<Button-1>', choose_directory)
 
 root.mainloop()
