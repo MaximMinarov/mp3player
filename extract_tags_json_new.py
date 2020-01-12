@@ -35,7 +35,7 @@ ban = str.maketrans('', '', '\:')
 folder_path = os.path.dirname(__file__)
 
 root = Tk()
-root.minsize(650, 650)
+root.minsize(850, 650)
 
 
 def resize(filename: str) -> None:
@@ -77,7 +77,7 @@ def extract_cover(path: str, album_title: str, album_artist: str, year_of_publis
         resize(cover_path)
 
 
-def extract_tags(path: str) -> str:
+def extract_tags(path: str) -> None:
     '''Извлекает теги из файла и заполняет ими базу данных'''
 
     audiofile = mutagen.File(path)
@@ -130,7 +130,7 @@ def extract_tags(path: str) -> str:
 
 
 def choose_files(directory: str) -> None:
-    '''Отбирает MP3-файлы из ввыбранной директории, применяет extract_tags к каждому из них'''
+    '''Отбирает MP3-файлы из выбранной директории и применяет extract_tags к каждому из них'''
     for file in os.listdir(directory):
         if file.endswith('.mp3'):
             path = os.path.realpath(file)
@@ -140,7 +140,7 @@ def choose_files(directory: str) -> None:
 
 
 def choose_directory(event) -> None:
-    '''Открывает диалоговое окно выбора директории с MP3-файлами'''
+    '''Открывает окно выбора директории с MP3-файлами'''
     directory = askdirectory()
     os.chdir(directory)
     choose_files(directory)
@@ -165,15 +165,15 @@ def create_albums() -> None:
         xy = []
         i = 1
         x = 30
-        y = 30
+        y = 50
 
         while i <= number:
             xy.append([x, y])
             i = i + 1
             x = x + 140
             if i % 7 == 0:
-                x = 0
-                y = y + 50
+                x = 30
+                y = y + 140
 
         for album in albums_s:
             albums_list.append(album[0])
@@ -190,11 +190,13 @@ def create_albums() -> None:
             album_button.image = image
             album_button.place(x = (xy[k])[0], y = (xy[k])[1])
             k = k + 1
-    
+
 
 create_albums()
 
-choose_directory_button = Button(root, text = 'Choose Directory')
+choose_directory_button = Button(root,
+                                 text = 'Choose Directory',
+                                 font='CeraPro-Bold')
 choose_directory_button.pack()
 choose_directory_button.bind('<Button-1>', choose_directory)
 
