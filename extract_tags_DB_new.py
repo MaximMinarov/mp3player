@@ -3,7 +3,7 @@ import datetime
 
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'
-# import pygame
+import pygame
 
 import sqlite3
 from mutagen.id3 import ID3
@@ -35,7 +35,10 @@ ban = str.maketrans('', '', '\:')
 folder_path = os.path.dirname(__file__)
 
 root = Tk()
-root.minsize(850, 650)
+root.minsize(800, 600)
+root.maxsize(800, 600)
+frame = Frame(root, height = 400, width = 800, bg = 'gray')
+frame.place(x = 0, y = 60)
 
 
 def resize(filename: str) -> None:
@@ -139,17 +142,34 @@ def choose_files(directory: str) -> None:
     # con.close()
 
 
-def choose_directory(event) -> None:
+def choose_directory() -> None:
     '''Открывает окно выбора директории с MP3-файлами'''
     directory = askdirectory()
     os.chdir(directory)
     choose_files(directory)
 
-    # exit()
+
+def play(song):
+    pygame.mixer.init()
+    pygame.mixer.music.load(song)
+    pygame.mixer.music.play()
 
 
-def create_list():
-    pass
+def create_list(album_title):
+    frame = Frame(root, height = 400, width = 800, bg = 'gray')
+    frame.place(x = 0, y = 60)
+    album_info_1 = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album_title,))
+    album_info = (album_info_1.fetchall())[0]
+    tracks_info_1 = cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
+    tracks_info = tracks_info_1.fetchall()
+    y = 40
+    for song in tracks_info:
+        song_button = Button(frame,
+                             text = song[1],
+                             font ='CeraPro-Bold',
+                             command = lambda song=song: play(song[0]))
+        song_button.place(x = 20, y = y)
+        y = y + 40
 
 
 def create_albums() -> None:
@@ -164,7 +184,7 @@ def create_albums() -> None:
         number = len(albums_s)
         xy = []
         i = 1
-        x = 30
+        x = 20
         y = 50
 
         while i <= number:
@@ -183,10 +203,10 @@ def create_albums() -> None:
         for album_1 in albums_list:
             image = ImageTk.PhotoImage(file = str(album_1))
 
-            album_button = Button(root,
+            album_button = Button(frame,
                                   image = image,
                                   width = 120, height = 120,
-                                  command = lambda: print('click'))
+                                  command = lambda album_title = album_1: create_list(album_title))
             album_button.image = image
             album_button.place(x = (xy[k])[0], y = (xy[k])[1])
             k = k + 1
@@ -194,10 +214,11 @@ def create_albums() -> None:
 
 create_albums()
 
+
 choose_directory_button = Button(root,
                                  text = 'Choose Directory',
-                                 font='CeraPro-Bold')
-choose_directory_button.pack()
-choose_directory_button.bind('<Button-1>', choose_directory)
+                                 font ='CeraPro-Bold',
+                                 command = lambda: choose_directory())
+choose_directory_button.place(x = 300, y = 10)
 
 root.mainloop()
