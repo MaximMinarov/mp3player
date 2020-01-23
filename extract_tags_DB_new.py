@@ -138,7 +138,7 @@ def choose_files(directory: str) -> None:
         if file.endswith('.mp3'):
             path = os.path.realpath(file)
             extract_tags(path)
-    create_albums()
+    create_albums(frame)
     # con.close()
 
 
@@ -149,13 +149,33 @@ def choose_directory() -> None:
     choose_files(directory)
 
 
-def play(song):
+def stop(button):
+    '''Останавливает воспроизведение композиции'''
+    pygame.mixer.music.stop()
+    button.place_forget()
+
+
+def play(song, y, frame):
+    '''Воспроизводит композицию'''
     pygame.mixer.init()
     pygame.mixer.music.load(song)
     pygame.mixer.music.play()
+    stop_button = Button(frame,
+                         text = 'Stop',
+                         font ='CeraPro-Bold')
+    stop_button.config(command = lambda widget = stop_button: stop(widget))
+    stop_button.place(x = 200, y = y)
+
+
+def back():
+    frame = Frame(root, height = 400, width = 800, bg = 'gray')
+    frame.place(x = 0, y = 60)
+    create_albums(frame)
+
 
 
 def create_list(album_title):
+    '''Создает список композиций'''
     frame = Frame(root, height = 400, width = 800, bg = 'gray')
     frame.place(x = 0, y = 60)
     album_info_1 = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album_title,))
@@ -167,12 +187,17 @@ def create_list(album_title):
         song_button = Button(frame,
                              text = song[1],
                              font ='CeraPro-Bold',
-                             command = lambda song=song: play(song[0]))
+                             command = lambda song=song, y=y: play(song[0], y, frame))
         song_button.place(x = 20, y = y)
         y = y + 40
+    back_button = Button(root,
+                         text = 'Back',
+                         font ='CeraPro-Bold',
+                         command = lambda: back())
+    back_button.place(x = 100, y = 10)
 
 
-def create_albums() -> None:
+def create_albums(frame) -> None:
     '''Создает список альбомов'''
     albums_list = []
 
@@ -212,7 +237,7 @@ def create_albums() -> None:
             k = k + 1
 
 
-create_albums()
+create_albums(frame)
 
 
 choose_directory_button = Button(root,
