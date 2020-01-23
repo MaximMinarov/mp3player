@@ -37,8 +37,15 @@ folder_path = os.path.dirname(__file__)
 root = Tk()
 root.minsize(800, 600)
 root.maxsize(800, 600)
-frame = Frame(root, height = 400, width = 800, bg = 'gray')
-frame.place(x = 0, y = 60)
+
+
+def create_frame():
+    '''Создает новый фрейм'''
+    frame = Frame(root, height = 400, width = 800, bg = 'gray')
+    frame.place(x = 0, y = 60)
+    return frame
+
+frame = create_frame()
 
 
 def resize(filename: str) -> None:
@@ -167,17 +174,16 @@ def play(song, y, frame):
     stop_button.place(x = 200, y = y)
 
 
-def back():
-    frame = Frame(root, height = 400, width = 800, bg = 'gray')
-    frame.place(x = 0, y = 60)
+def back(button):
+    '''Возращает к списку альбомов'''
+    frame = create_frame()
+    button.place_forget()
     create_albums(frame)
-
 
 
 def create_list(album_title):
     '''Создает список композиций'''
-    frame = Frame(root, height = 400, width = 800, bg = 'gray')
-    frame.place(x = 0, y = 60)
+    frame = create_frame()
     album_info_1 = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album_title,))
     album_info = (album_info_1.fetchall())[0]
     tracks_info_1 = cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
@@ -192,8 +198,8 @@ def create_list(album_title):
         y = y + 40
     back_button = Button(root,
                          text = 'Back',
-                         font ='CeraPro-Bold',
-                         command = lambda: back())
+                         font ='CeraPro-Bold')
+    back_button.config(command = lambda widget = back_button: back(widget))
     back_button.place(x = 100, y = 10)
 
 
