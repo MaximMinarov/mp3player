@@ -3,7 +3,6 @@ import sqlite3, datetime, mutagen, random
 from mutagen.id3 import ID3
 from pathlib import Path
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PIL import Image, ImageDraw
 import Design
 
 con = sqlite3.connect('tagsdatabase.db')
@@ -125,27 +124,39 @@ class MyWindow(QtWidgets.QWidget):
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
         self.setStyleSheet('background: #27304F;')
-        self.setMinimumSize(600, 400)
+
         self.ButtonCopy = Design.Button()
-        self.box1 = QtWidgets.QGridLayout()
-        self.box2 = QtWidgets.QVBoxLayout()
-        self.button = self.ButtonCopy.create_button()
-        self.box2.addWidget(self.button, alignment=QtCore.Qt.AlignRight) 
+        self.listWidget = Design.ListWidget()
+
+        self.scrollArea = QtWidgets.QScrollArea()
+        self.content_widget = QtWidgets.QWidget()
+        self.scrollArea.setWidget(self.content_widget)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+
+        self.box1 = QtWidgets.QGridLayout() # ГЛАВНЫЙ БОКС box1
+        self.box2 = QtWidgets.QVBoxLayout() # ВЕРТИКАЛЬНЫЙ БОКС box2
+
+        self.choose_dir_button = self.ButtonCopy.create_button()
+        self.choose_dir_button.clicked.connect(self.choose_dir_thread)
+        self.box2.addWidget(self.choose_dir_button, alignment = QtCore.Qt.AlignRight)
+
+        self.box1.addWidget(self.listWidget, 0, 0)
+        self.box1.setColumnStretch(0, 1)
         self.box1.addLayout(self.box2, 0, 1)
-        self.button.clicked.connect(self.choose_dir_thread)
+
         self.setLayout(self.box1)
+
         self.create_albums()
 
     def choose_dir_thread(self):
         print('CHOOSE DIRECTORY BUTTON: click')
         self.directory = self.choose_dir()
         if self.directory:
-            # THREAD #
             self.mythread = MyThread(self.directory)
             self.mythread.started.connect(self.on_started)
             self.mythread.finished.connect(self.on_finished)
             self.mythread.start()
-            # ------ #
 
     def choose_dir(self):
         print('dialog window')
@@ -166,6 +177,7 @@ class MyWindow(QtWidgets.QWidget):
     def create_albums(self):
         con = sqlite3.connect('tagsdatabase.db')
         cur = con.cursor()
+
         self.albums_list = []
         albums_f = cur.execute('SELECT Cover_Path FROM covers_db')
         albums_s = albums_f.fetchall()
@@ -173,26 +185,24 @@ class MyWindow(QtWidgets.QWidget):
         for album in albums_s:
             self.albums_list.append(album[0])
 
-        self.box3 = QtWidgets.QGridLayout()
-        self.box3.setSpacing(20)
-
-        line = 0
-        column = 0
-
         for album_ in self.albums_list:
             label = Design.Label(album_, album_)
             label.clicked.connect(lambda num=album_: self.click(num, con, cur))
-            self.box3.addWidget(label, line, column)
-            column = column + 1
-        self.box1.addLayout(self.box3, 0, 0, 1, 1, QtCore.Qt.AlignCenter)
-        self.box1.setColumnStretch(0, 1) 
+            self.listWidget.makeItem(label)
 
     def click(self, album, con, cur):
-        self.delete()
+        self.listWidget.hide()
+
+        if not hasattr(self, 'box3'):
+            self.box1.addWidget(self.scrollArea, 0, 0)
+            self.box3 = QtWidgets.QGridLayout(self.content_widget) # КОРОБКА-СЕТКА
+        else:
+            self.scrollArea.show()
         self.create_list(album, con, cur)
-        self.back_button = QtWidgets.QPushButton('Back')
-        self.back_button.clicked.connect(self.back_button_func)
-        self.box2.addWidget(self.back_button)
+
+        self.back_btn = QtWidgets.QPushButton('Back', clicked=self.onButton) 
+        self.back_btn.setFixedSize(100, 60)
+        self.box2.addWidget(self.back_btn, alignment=QtCore.Qt.AlignRight)
 
     def create_list(self, album, con, cur):
         self.song_list = []
@@ -205,23 +215,16 @@ class MyWindow(QtWidgets.QWidget):
             self.song_button = QtWidgets.QPushButton(song[1])
             self.box3.addWidget(self.song_button, row, 0)
             row = row + 1
-    
-    def delete(self):
-        for row in range(self.box3.rowCount()):
-            for col in range(self.box3.columnCount()):
-                w = self.box3.itemAtPosition(row, col).widget()
-                w.deleteLater()
 
-    def delete2(self):
+    def onButton(self):
+        self.back_btn.deleteLater()
         col = 0
-        self.back_button.deleteLater()
         for row in range(self.box3.rowCount()):
-            w = self.box3.itemAtPosition(row, col).widget()
+            if self.box3.itemAtPosition(row, col) is not None:
+                w = self.box3.itemAtPosition(row, col).widget()
             w.deleteLater()
-
-    def back_button_func(self):
-        self.delete2()
-        self.create_albums()
+        self.scrollArea.hide()
+        self.listWidget.show()
 
 if __name__ == '__main__':
     import sys
