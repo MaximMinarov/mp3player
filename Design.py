@@ -53,3 +53,26 @@ class Label(QtWidgets.QLabel):
 
     def mouseReleaseEvent(self, event):
         self.clicked.emit(self.num)
+
+
+class ListWidget(QtWidgets.QListWidget):
+    def __init__(self, *args, **kwargs):
+        super(ListWidget, self).__init__(*args, **kwargs)
+        #self.setWindowTitle('ListWidget')
+        #self.setStyleSheet('border-style: hidden;')
+        self.resize(520, 400)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setEditTriggers(self.NoEditTriggers)
+        self.setDefaultDropAction(QtCore.Qt.IgnoreAction)
+        self.setSelectionMode(self.ContiguousSelection)
+        self.setFlow(self.LeftToRight)
+        self.setWrapping(True)
+        self.setResizeMode(self.Adjust)
+        self.setSpacing(10)
+        self._rubberPos  = None
+        self._rubberBand = None #QtWidgets.QRubberBand(QtWidgets.QRubberBand.Rectangle, self)
+
+    def makeItem(self, lb):
+        item = QtWidgets.QListWidgetItem(self)
+        item.setSizeHint(QtCore.QSize(140, 140))
+        self.setItemWidget(item, lb)
