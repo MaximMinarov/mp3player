@@ -128,18 +128,17 @@ class MyWindow(QtWidgets.QWidget):
         self.ButtonCopy = Design.Button()
         self.listWidget = Design.ListWidget()
 
-        self.scrollArea = QtWidgets.QScrollArea()
-        self.content_widget = QtWidgets.QWidget()
-        self.scrollArea.setWidget(self.content_widget)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-
-        self.box1 = QtWidgets.QGridLayout() # ГЛАВНЫЙ БОКС box1
-        self.box2 = QtWidgets.QVBoxLayout() # ВЕРТИКАЛЬНЫЙ БОКС box2
+        self.box1 = QtWidgets.QGridLayout()
+        self.box2 = QtWidgets.QVBoxLayout()
 
         self.choose_dir_button = self.ButtonCopy.create_button()
         self.choose_dir_button.clicked.connect(self.choose_dir_thread)
         self.box2.addWidget(self.choose_dir_button, alignment = QtCore.Qt.AlignRight)
+
+        self.back_btn = QtWidgets.QPushButton('Back', clicked=self.back)
+        self.back_btn.setFixedSize(100, 60) 
+        self.box2.addWidget(self.back_btn)  
+        self.back_btn.hide() 
 
         self.box1.addWidget(self.listWidget, 0, 0)
         self.box1.setColumnStretch(0, 1)
@@ -147,7 +146,7 @@ class MyWindow(QtWidgets.QWidget):
 
         self.setLayout(self.box1)
 
-        self.create_albums()
+        self.create_albums_list()
 
     def choose_dir_thread(self):
         print('CHOOSE DIRECTORY BUTTON: click')
@@ -174,57 +173,49 @@ class MyWindow(QtWidgets.QWidget):
     def on_finished(self):
         print('THREAD: finish')
 
-    def create_albums(self):
+    def create_albums_list(self):
         con = sqlite3.connect('tagsdatabase.db')
         cur = con.cursor()
 
-        self.albums_list = []
-        albums_f = cur.execute('SELECT Cover_Path FROM covers_db')
-        albums_s = albums_f.fetchall()
+        albums_list = cur.execute('SELECT Cover_Path FROM covers_db')
+        albums_list = albums_list.fetchall()
 
-        for album in albums_s:
-            self.albums_list.append(album[0])
+        self.create_albums(albums_list, con, cur)
 
-        for album_ in self.albums_list:
-            label = Design.Label(album_, album_)
-            label.clicked.connect(lambda num=album_: self.click(num, con, cur))
+    def create_albums(self, albums_list, con, cur):
+        for album in albums_list:
+            label = Design.Label(album[0], album[0])
+            label.clicked.connect(lambda album=album[0]: self.click(album, con, cur))
             self.listWidget.makeItem(label)
 
     def click(self, album, con, cur):
-        self.listWidget.hide()
-
-        if not hasattr(self, 'box3'):
-            self.box1.addWidget(self.scrollArea, 0, 0)
-            self.box3 = QtWidgets.QGridLayout(self.content_widget) # КОРОБКА-СЕТКА
-        else:
-            self.scrollArea.show()
+        self.scrollArea = QtWidgets.QScrollArea()
+        self.content_widget = QtWidgets.QWidget()
+        self.scrollArea.setWidget(self.content_widget)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.box3 = QtWidgets.QGridLayout(self.content_widget)
+        self.box1.addWidget(self.scrollArea, 0, 0)
         self.create_list(album, con, cur)
-
-        self.back_btn = QtWidgets.QPushButton('Back', clicked=self.onButton) 
-        self.back_btn.setFixedSize(100, 60)
-        self.box2.addWidget(self.back_btn, alignment=QtCore.Qt.AlignRight)
+        self.back_btn.show()
 
     def create_list(self, album, con, cur):
         self.song_list = []
-        album_info_1 = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album,))
-        album_info = (album_info_1.fetchall())[0]
-        tracks_info_1 = cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
-        tracks_info = tracks_info_1.fetchall()
+        album_info = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album,))
+        album_info = (album_info.fetchall())[0]
+        tracks_info = cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
+        tracks_info = tracks_info.fetchall()
         row = 0
         for song in tracks_info:
             self.song_button = QtWidgets.QPushButton(song[1])
             self.box3.addWidget(self.song_button, row, 0)
             row = row + 1
 
-    def onButton(self):
-        self.back_btn.deleteLater()
-        col = 0
-        for row in range(self.box3.rowCount()):
-            if self.box3.itemAtPosition(row, col) is not None:
-                w = self.box3.itemAtPosition(row, col).widget()
-            w.deleteLater()
-        self.scrollArea.hide()
-        self.listWidget.show()
+    def back(self):
+        self.back_btn.hide()
+        self.listWidget = Design.ListWidget()
+        self.create_albums_list()
+        self.box1.addWidget(self.listWidget, 0, 0)
 
 if __name__ == '__main__':
     import sys
