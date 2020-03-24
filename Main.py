@@ -312,6 +312,7 @@ class MyWindow(QtWidgets.QWidget):
                 self.play_pause = False
                 self.qsl.setEnabled(True)
                 self.dict[song][0].setText("Pause")
+                self.const_btn.setText("Pause")
             else:
                 self.player.pause()
                 self.play_pause = True
@@ -323,12 +324,14 @@ class MyWindow(QtWidgets.QWidget):
             self.play_pause = False
             self.qsl.setEnabled(True)
             self.const_btn.setText("Pause")
-            self.dict[self.song][0].setText("Pause")
+            if self.song in self.dict:
+                self.dict[self.song][0].setText("Pause")
         else:
             self.player.pause()
             self.play_pause = True
             self.const_btn.setText("Play")
-            self.dict[self.song][0].setText("Play")        
+            if self.song in self.dict:
+                self.dict[self.song][0].setText("Play")
 
     def player_state(self, state):
         if state == 0:
