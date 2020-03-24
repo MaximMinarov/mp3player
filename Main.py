@@ -157,15 +157,16 @@ class MyWindow(QtWidgets.QWidget):
         self.btn2.clicked.connect(lambda: self.make_page(2))
         self.box4.addWidget(self.btn2)
 
-        self.art = QtWidgets.QLabel()
-        self.art.setPixmap(QtGui.QPixmap('album.png'))
-        self.art.setFixedSize(150, 150)
+        self.art = Design.Label('album.png')
         self.box5.addWidget(self.art)
 
         self.song_title = QtWidgets.QLabel('Song Title')
         self.box5.addWidget(self.song_title)
         self.artist = QtWidgets.QLabel('Artist')
         self.box5.addWidget(self.artist)
+
+        self.const_btn = QtWidgets.QPushButton('Play', clicked = self.const_play)
+        self.box5.addWidget(self.const_btn)
 
         self.player = QtMultimedia.QMediaPlayer()
         self.player.stateChanged.connect(self.player_state)
@@ -176,12 +177,13 @@ class MyWindow(QtWidgets.QWidget):
         self.qsl.setEnabled(False)
         self.box5.addWidget(self.qsl)
 
-        self.repeat_btn = QtWidgets.QPushButton('Repeat', clicked=self.repeat)
+        self.choose_dir_btn = self.ButtonCopy.create_button()
+        self.choose_dir_btn.clicked.connect(self.choose_dir_thread)
+        self.choose_dir_btn.hide()
+        self.box5.addWidget(self.choose_dir_btn)
 
-        self.choose_dir_button = self.ButtonCopy.create_button()
-        self.choose_dir_button.clicked.connect(self.choose_dir_thread)
-        self.choose_dir_button.hide()
-        self.box5.addWidget(self.choose_dir_button)
+        self.repeat_btn = QtWidgets.QPushButton('Repeat', clicked = self.repeat)
+        self.box5.addWidget(self.repeat_btn)
 
         self.back_btn = QtWidgets.QPushButton('Back', clicked = self.back)
         self.box2.addWidget(self.back_btn)
@@ -234,9 +236,9 @@ class MyWindow(QtWidgets.QWidget):
 
     def create_albums(self, albums_list):
         for album in albums_list:
-            label = Design.Label(album[0], album[0])
-            label.clicked.connect(lambda album=album[0]: self.click(album))
-            self.listWidget.makeItem(label)
+            art = Design.Label(album[0])
+            art.clicked.connect(lambda album=album[0]: self.click(album))
+            self.listWidget.makeItem(art)
 
     def click(self, album):
         self.album = album
@@ -264,6 +266,8 @@ class MyWindow(QtWidgets.QWidget):
             if (song[0] == self.song) and (self.play_pause == False):
                 play_btn.setText("Pause")
             self.dict[song[0]].append(play_btn)
+            self.dict[song[0]].append(song[1])
+            self.dict[song[0]].append(self.album)
             self.box3.addWidget(song_label, row, 0)
             self.box3.addWidget(play_btn, row, 1)           
             row = row + 1
@@ -299,6 +303,9 @@ class MyWindow(QtWidgets.QWidget):
             self.play_pause = False
             self.qsl.setEnabled(True)
             self.dict[song][0].setText("Pause")
+            self.song_title.setText(self.dict[self.song][1])
+            self.art.setPicture(self.dict[self.song][2])
+            self.const_btn.setText("Pause")
         else:
             if self.play_pause == True:
                 self.player.play()
@@ -310,17 +317,31 @@ class MyWindow(QtWidgets.QWidget):
                 self.play_pause = True
                 self.dict[song][0].setText("Play")
 
+    def const_play(self):
+        if self.play_pause == True:
+            self.player.play()
+            self.play_pause = False
+            self.qsl.setEnabled(True)
+            self.const_btn.setText("Pause")
+            self.dict[self.song][0].setText("Pause")
+        else:
+            self.player.pause()
+            self.play_pause = True
+            self.const_btn.setText("Play")
+            self.dict[self.song][0].setText("Play")        
+
     def player_state(self, state):
         if state == 0:
-            self.play_pause = True
-            self.qsl.setSliderPosition(0)
-            self.qsl.setEnabled(False)
             if self.play_repeat == True:
-                self.qsl.setEnabled(True)
-                self.play_pause = False
+                self.qsl.setSliderPosition(0)
                 self.player.play()
             else:
-                self.dict[self.song][0].setText("Play")
+                self.play_pause = True
+                self.qsl.setSliderPosition(0)
+                self.qsl.setEnabled(False)
+                self.const_btn.setText("Play")
+                if self.song in self.dict:
+                    self.dict[self.song][0].setText("Play")
 
     def repeat(self):
         if self.play_repeat == False:
@@ -334,12 +355,13 @@ class MyWindow(QtWidgets.QWidget):
         if (self.current_index != 1) and (index == 1):
             self.current_index = 1
             
-            self.choose_dir_button.hide()
+            self.choose_dir_btn.hide()
 
             self.art.show()
             self.song_title.show()
             self.artist.show()
             self.qsl.show()
+            self.repeat_btn.show()
         
         if (self.current_index != 2) and (index == 2):
             self.current_index = 2
@@ -348,8 +370,9 @@ class MyWindow(QtWidgets.QWidget):
             self.song_title.hide()
             self.artist.hide()
             self.qsl.hide()
+            self.repeat_btn.hide()
 
-            self.choose_dir_button.show()
+            self.choose_dir_btn.show()
 
 
 if __name__ == '__main__':
@@ -359,4 +382,3 @@ if __name__ == '__main__':
     window.setWindowTitle(' ')
     window.show()
     sys.exit(app.exec_())
-
