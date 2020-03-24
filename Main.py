@@ -2,7 +2,7 @@
 import sqlite3, datetime, mutagen, random
 from mutagen.id3 import ID3
 from pathlib import Path
-from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui, QtMultimedia
 import Design
 
 con = sqlite3.connect('tagsdatabase.db')
@@ -25,12 +25,12 @@ cur.execute('''CREATE TABLE IF NOT EXISTS covers_db(File_Path TEXT,
 con.commit()
 con.close()
 
-random_list = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g']
 folder_path = Path(__file__).parent
 
 def extract_cover(path: str, album_title: str, album_artist: str, year_of_publishing:str, con, cur) -> None:
     '''Извлекает обложку из файла'''
-
+  
+    random_list = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g']
     music = ID3(path)
     data = music.getall('APIC')[0].data
     cover_path = False
@@ -106,6 +106,7 @@ def choose_files(directory: str, con, cur) -> None:
     if pathlist:
         for path in pathlist:
             path = str(path)
+            path = path.replace('\\', '/')
             extract_tags(path, con, cur)
     con.close()
 
@@ -120,31 +121,80 @@ class MyThread(QtCore.QThread):
         choose_files(self.directory, con, cur)
 
 class MyWindow(QtWidgets.QWidget):
-
     def __init__(self, parent=None):
         QtWidgets.QWidget.__init__(self, parent)
-        self.setStyleSheet('background: #27304F;')
+        self.setStyleSheet('background: #222E49;')
+
+        self.dict = {}
+        self.song = ''
+        self.play_repeat = True
+        self.play_pause = True
+        self.current_index = 1
 
         self.ButtonCopy = Design.Button()
         self.listWidget = Design.ListWidget()
 
-        self.box1 = QtWidgets.QGridLayout()
+        self.box1 = QtWidgets.QGridLayout(self)
         self.box2 = QtWidgets.QVBoxLayout()
+
+        container = QtWidgets.QWidget()
+        container.setStyleSheet('background: white;')
+        container.setFixedWidth(250)
+        container.setMinimumHeight(150)
+        self.box2.addWidget(container)
+        self.box5 = QtWidgets.QVBoxLayout(container)
+
+        container = QtWidgets.QWidget()
+        container.setStyleSheet('background: yellow;')
+        container.setFixedSize(250, 50)
+        self.box2.addWidget(container)
+        self.box4 = QtWidgets.QHBoxLayout(container)
+
+        self.btn1 = QtWidgets.QPushButton('Page1')
+        self.btn1.clicked.connect(lambda: self.make_page(1))
+        self.box4.addWidget(self.btn1)
+        self.btn2 = QtWidgets.QPushButton('Page2')
+        self.btn2.clicked.connect(lambda: self.make_page(2))
+        self.box4.addWidget(self.btn2)
+
+        self.art = QtWidgets.QLabel()
+        self.art.setPixmap(QtGui.QPixmap('album.png'))
+        self.art.setFixedSize(150, 150)
+        self.box5.addWidget(self.art)
+
+        self.song_title = QtWidgets.QLabel('Song Title')
+        self.box5.addWidget(self.song_title)
+        self.artist = QtWidgets.QLabel('Artist')
+        self.box5.addWidget(self.artist)
+
+        self.player = QtMultimedia.QMediaPlayer()
+        self.player.stateChanged.connect(self.player_state)
+
+        self.qsl = QtWidgets.QSlider(QtCore.Qt.Horizontal, self)
+        self.qsl.sliderMoved[int].connect(self.set_play_position)
+        self.qsl.sliderReleased.connect(self.slider_released)
+        self.qsl.setEnabled(False)
+        self.box5.addWidget(self.qsl)
+
+        self.repeat_btn = QtWidgets.QPushButton('Repeat', clicked=self.repeat)
 
         self.choose_dir_button = self.ButtonCopy.create_button()
         self.choose_dir_button.clicked.connect(self.choose_dir_thread)
-        self.box2.addWidget(self.choose_dir_button, alignment = QtCore.Qt.AlignRight)
+        self.choose_dir_button.hide()
+        self.box5.addWidget(self.choose_dir_button)
 
-        self.back_btn = QtWidgets.QPushButton('Back', clicked=self.back)
-        self.back_btn.setFixedSize(100, 60) 
-        self.box2.addWidget(self.back_btn)  
+        self.back_btn = QtWidgets.QPushButton('Back', clicked = self.back)
+        self.box2.addWidget(self.back_btn)
         self.back_btn.hide() 
 
         self.box1.addWidget(self.listWidget, 0, 0)
         self.box1.setColumnStretch(0, 1)
         self.box1.addLayout(self.box2, 0, 1)
 
-        self.setLayout(self.box1)
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.play_mode)
+        self.timer.start(1000)
+
 
         self.create_albums_list()
 
@@ -174,48 +224,133 @@ class MyWindow(QtWidgets.QWidget):
         print('THREAD: finish')
 
     def create_albums_list(self):
-        con = sqlite3.connect('tagsdatabase.db')
-        cur = con.cursor()
+        self.con = sqlite3.connect('tagsdatabase.db')
+        self.cur = self.con.cursor()
 
-        albums_list = cur.execute('SELECT Cover_Path FROM covers_db')
+        albums_list = self.cur.execute('SELECT Cover_Path FROM covers_db')
         albums_list = albums_list.fetchall()
 
-        self.create_albums(albums_list, con, cur)
+        self.create_albums(albums_list)
 
-    def create_albums(self, albums_list, con, cur):
+    def create_albums(self, albums_list):
         for album in albums_list:
             label = Design.Label(album[0], album[0])
-            label.clicked.connect(lambda album=album[0]: self.click(album, con, cur))
+            label.clicked.connect(lambda album=album[0]: self.click(album))
             self.listWidget.makeItem(label)
 
-    def click(self, album, con, cur):
+    def click(self, album):
+        self.album = album
         self.scrollArea = QtWidgets.QScrollArea()
-        self.content_widget = QtWidgets.QWidget()
-        self.scrollArea.setWidget(self.content_widget)
+        container = QtWidgets.QWidget()
+        self.scrollArea.setWidget(container)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.box3 = QtWidgets.QGridLayout(self.content_widget)
+        self.box3 = QtWidgets.QGridLayout(container)
         self.box1.addWidget(self.scrollArea, 0, 0)
-        self.create_list(album, con, cur)
+        self.create_list()
         self.back_btn.show()
 
-    def create_list(self, album, con, cur):
+    def create_list(self):
         self.song_list = []
-        album_info = cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (album,))
+        album_info = self.cur.execute('SELECT Album_Title, Album_Artist, Year_of_Publishing FROM covers_db WHERE Cover_Path=?', (self.album,))
         album_info = (album_info.fetchall())[0]
-        tracks_info = cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
+        tracks_info = self.cur.execute('SELECT File_Path, Song_Title FROM tags_db WHERE Album_Title = ? AND Album_Artist = ? AND Year_of_Publishing = ?', (album_info[0], album_info[1], album_info[2]))
         tracks_info = tracks_info.fetchall()
         row = 0
         for song in tracks_info:
-            self.song_button = QtWidgets.QPushButton(song[1])
-            self.box3.addWidget(self.song_button, row, 0)
+            self.dict[song[0]] = []
+            song_label = QtWidgets.QLabel(song[1])
+            play_btn = QtWidgets.QPushButton('Play', clicked = lambda ch, song = song[0]: self.play(song))
+            if (song[0] == self.song) and (self.play_pause == False):
+                play_btn.setText("Pause")
+            self.dict[song[0]].append(play_btn)
+            self.box3.addWidget(song_label, row, 0)
+            self.box3.addWidget(play_btn, row, 1)           
             row = row + 1
+        print(self.dict)
 
     def back(self):
         self.back_btn.hide()
         self.listWidget = Design.ListWidget()
+        self.dict = {}
         self.create_albums_list()
         self.box1.addWidget(self.listWidget, 0, 0)
+
+    def play_mode(self):
+        if self.play_pause == False:
+            self.qsl.setMinimum(0)
+            self.qsl.setMaximum(self.player.duration())
+            self.qsl.setValue(self.qsl.value() + 1000)
+
+    def slider_released(self):
+        self.player.setPosition(self.qsl.value())
+
+    def set_play_position(self, val):
+        pass
+
+    def play(self, song):
+        if self.song != song:
+            if self.player.isAudioAvailable() == True:
+                if self.song in self.dict:
+                    self.dict[self.song][0].setText("Play")
+            self.player.setMedia(QtMultimedia.QMediaContent(QtCore.QUrl(song)))
+            self.song = song
+            self.player.play()
+            self.play_pause = False
+            self.qsl.setEnabled(True)
+            self.dict[song][0].setText("Pause")
+        else:
+            if self.play_pause == True:
+                self.player.play()
+                self.play_pause = False
+                self.qsl.setEnabled(True)
+                self.dict[song][0].setText("Pause")
+            else:
+                self.player.pause()
+                self.play_pause = True
+                self.dict[song][0].setText("Play")
+
+    def player_state(self, state):
+        if state == 0:
+            self.play_pause = True
+            self.qsl.setSliderPosition(0)
+            self.qsl.setEnabled(False)
+            if self.play_repeat == True:
+                self.qsl.setEnabled(True)
+                self.play_pause = False
+                self.player.play()
+            else:
+                self.dict[self.song][0].setText("Play")
+
+    def repeat(self):
+        if self.play_repeat == False:
+            self.play_repeat = True
+            self.repeat_btn.setText("Repeat")   
+        else:
+            self.play_repeat = False
+            self.repeat_btn.setText("Not Repeat")
+
+    def make_page(self, index):
+        if (self.current_index != 1) and (index == 1):
+            self.current_index = 1
+            
+            self.choose_dir_button.hide()
+
+            self.art.show()
+            self.song_title.show()
+            self.artist.show()
+            self.qsl.show()
+        
+        if (self.current_index != 2) and (index == 2):
+            self.current_index = 2
+
+            self.art.hide()
+            self.song_title.hide()
+            self.artist.hide()
+            self.qsl.hide()
+
+            self.choose_dir_button.show()
+
 
 if __name__ == '__main__':
     import sys
@@ -224,3 +359,4 @@ if __name__ == '__main__':
     window.setWindowTitle(' ')
     window.show()
     sys.exit(app.exec_())
+
