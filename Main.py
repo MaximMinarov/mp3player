@@ -138,14 +138,14 @@ class MyWindow(QtWidgets.QWidget):
         self.box2 = QtWidgets.QVBoxLayout()
 
         self.container = QtWidgets.QWidget()
-        self.container.setStyleSheet('background: white;')
+        self.container.setStyleSheet('background: #394976;')
         self.container.setMinimumSize(250, 300)
         self.container.setMaximumWidth(350)
         self.box2.addWidget(self.container)
         self.box5 = QtWidgets.QVBoxLayout(self.container)
 
         self.container2 = QtWidgets.QWidget()
-        self.container2.setStyleSheet('background: white;')
+        self.container2.setStyleSheet('background: #394976;')
         self.container2.setMinimumSize(250, 300)
         self.container2.setMaximumWidth(350)
         self.box2.addWidget(self.container2)
@@ -153,7 +153,7 @@ class MyWindow(QtWidgets.QWidget):
         self.container2.hide()
 
         container = QtWidgets.QWidget()
-        container.setStyleSheet('background: yellow;')
+        container.setStyleSheet('background: #394976;')
         container.setMinimumWidth(250)
         container.setMaximumSize(350, 40)
         self.box2.addWidget(container)
@@ -179,6 +179,7 @@ class MyWindow(QtWidgets.QWidget):
         self.box5.addWidget(self.artist, alignment=QtCore.Qt.AlignCenter)
 
         self.const_btn = QtWidgets.QPushButton('Play', clicked = self.const_play)
+        self.const_btn.setEnabled(False)
         self.box5.addStretch(2)
         self.box5.addWidget(self.const_btn, alignment=QtCore.Qt.AlignCenter)
 
@@ -318,6 +319,7 @@ class MyWindow(QtWidgets.QWidget):
             self.player.play()
             self.play_pause = False
             self.qsl.setEnabled(True)
+            self.const_btn.setEnabled(True)
             self.dict[song][0].setText("Pause")
             self.song_title.setText(self.dict[self.song][1])
             self.art.setPicture(self.dict[self.song][2])
@@ -327,6 +329,7 @@ class MyWindow(QtWidgets.QWidget):
                 self.player.play()
                 self.play_pause = False
                 self.qsl.setEnabled(True)
+                self.const_btn.setEnabled(True)
                 self.dict[song][0].setText("Pause")
                 self.const_btn.setText("Pause")
             else:
@@ -340,6 +343,7 @@ class MyWindow(QtWidgets.QWidget):
                 self.player.play()
                 self.play_pause = False
                 self.qsl.setEnabled(True)
+                self.const_btn.setEnabled(True)
                 self.const_btn.setText("Pause")
                 if self.song in self.dict:
                     self.dict[self.song][0].setText("Pause")
@@ -359,6 +363,7 @@ class MyWindow(QtWidgets.QWidget):
                 self.play_pause = True
                 self.qsl.setSliderPosition(0)
                 self.qsl.setEnabled(False)
+                self.const_btn.setEnabled(False)
                 self.const_btn.setText("Play")
                 if self.song in self.dict:
                     self.dict[self.song][0].setText("Play")
