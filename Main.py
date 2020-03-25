@@ -137,16 +137,25 @@ class MyWindow(QtWidgets.QWidget):
         self.box1 = QtWidgets.QGridLayout(self)
         self.box2 = QtWidgets.QVBoxLayout()
 
-        container = QtWidgets.QWidget()
-        container.setStyleSheet('background: white;')
-        container.setFixedWidth(250)
-        container.setMinimumHeight(150)
-        self.box2.addWidget(container)
-        self.box5 = QtWidgets.QVBoxLayout(container)
+        self.container = QtWidgets.QWidget()
+        self.container.setStyleSheet('background: white;')
+        self.container.setMinimumSize(250, 300)
+        self.container.setMaximumWidth(350)
+        self.box2.addWidget(self.container)
+        self.box5 = QtWidgets.QVBoxLayout(self.container)
+
+        self.container2 = QtWidgets.QWidget()
+        self.container2.setStyleSheet('background: white;')
+        self.container2.setMinimumSize(250, 300)
+        self.container2.setMaximumWidth(350)
+        self.box2.addWidget(self.container2)
+        self.box6 = QtWidgets.QVBoxLayout(self.container2)
+        self.container2.hide()
 
         container = QtWidgets.QWidget()
         container.setStyleSheet('background: yellow;')
-        container.setFixedSize(250, 50)
+        container.setMinimumWidth(250)
+        container.setMaximumSize(350, 40)
         self.box2.addWidget(container)
         self.box4 = QtWidgets.QHBoxLayout(container)
 
@@ -157,16 +166,21 @@ class MyWindow(QtWidgets.QWidget):
         self.btn2.clicked.connect(lambda: self.make_page(2))
         self.box4.addWidget(self.btn2)
 
-        self.art = Design.Label('album.png')
-        self.box5.addWidget(self.art)
+        self.art = Design.Label('album.png', 150)
+        self.box5.addStretch(3)
+        self.box5.addWidget(self.art, alignment=QtCore.Qt.AlignCenter)
 
         self.song_title = QtWidgets.QLabel('Song Title')
-        self.box5.addWidget(self.song_title)
+        self.box5.addStretch(2)
+        self.box5.addWidget(self.song_title, alignment=QtCore.Qt.AlignCenter)
+
         self.artist = QtWidgets.QLabel('Artist')
-        self.box5.addWidget(self.artist)
+        self.box5.addStretch(1)
+        self.box5.addWidget(self.artist, alignment=QtCore.Qt.AlignCenter)
 
         self.const_btn = QtWidgets.QPushButton('Play', clicked = self.const_play)
-        self.box5.addWidget(self.const_btn)
+        self.box5.addStretch(2)
+        self.box5.addWidget(self.const_btn, alignment=QtCore.Qt.AlignCenter)
 
         self.player = QtMultimedia.QMediaPlayer()
         self.player.stateChanged.connect(self.player_state)
@@ -175,23 +189,25 @@ class MyWindow(QtWidgets.QWidget):
         self.qsl.sliderMoved[int].connect(self.set_play_position)
         self.qsl.sliderReleased.connect(self.slider_released)
         self.qsl.setEnabled(False)
+        self.box5.addStretch(1)
         self.box5.addWidget(self.qsl)
+
+        self.repeat_btn = QtWidgets.QPushButton('Repeat', clicked = self.repeat)
+        self.box5.addStretch(2)
+        self.box5.addWidget(self.repeat_btn, alignment=QtCore.Qt.AlignCenter)
+        self.box5.addStretch(3)
 
         self.choose_dir_btn = self.ButtonCopy.create_button()
         self.choose_dir_btn.clicked.connect(self.choose_dir_thread)
-        self.choose_dir_btn.hide()
-        self.box5.addWidget(self.choose_dir_btn)
-
-        self.repeat_btn = QtWidgets.QPushButton('Repeat', clicked = self.repeat)
-        self.box5.addWidget(self.repeat_btn)
+        self.box6.addWidget(self.choose_dir_btn)
 
         self.back_btn = QtWidgets.QPushButton('Back', clicked = self.back)
-        self.box2.addWidget(self.back_btn)
+        self.box2.addWidget(self.back_btn, alignment=QtCore.Qt.AlignCenter)
         self.back_btn.hide() 
 
         self.box1.addWidget(self.listWidget, 0, 0)
-        self.box1.setColumnStretch(0, 1)
         self.box1.addLayout(self.box2, 0, 1)
+        self.box1.setColumnStretch(1, 1)
 
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.play_mode)
@@ -236,7 +252,7 @@ class MyWindow(QtWidgets.QWidget):
 
     def create_albums(self, albums_list):
         for album in albums_list:
-            art = Design.Label(album[0])
+            art = Design.Label(album[0], 150)
             art.clicked.connect(lambda album=album[0]: self.click(album))
             self.listWidget.makeItem(art)
 
@@ -271,7 +287,7 @@ class MyWindow(QtWidgets.QWidget):
             self.box3.addWidget(song_label, row, 0)
             self.box3.addWidget(play_btn, row, 1)           
             row = row + 1
-        print(self.dict)
+        #print(self.dict)
 
     def back(self):
         self.back_btn.hide()
@@ -319,19 +335,20 @@ class MyWindow(QtWidgets.QWidget):
                 self.dict[song][0].setText("Play")
 
     def const_play(self):
-        if self.play_pause == True:
-            self.player.play()
-            self.play_pause = False
-            self.qsl.setEnabled(True)
-            self.const_btn.setText("Pause")
-            if self.song in self.dict:
-                self.dict[self.song][0].setText("Pause")
-        else:
-            self.player.pause()
-            self.play_pause = True
-            self.const_btn.setText("Play")
-            if self.song in self.dict:
-                self.dict[self.song][0].setText("Play")
+        if self.player.isAudioAvailable() == True:
+            if self.play_pause == True:
+                self.player.play()
+                self.play_pause = False
+                self.qsl.setEnabled(True)
+                self.const_btn.setText("Pause")
+                if self.song in self.dict:
+                    self.dict[self.song][0].setText("Pause")
+            else:
+                self.player.pause()
+                self.play_pause = True
+                self.const_btn.setText("Play")
+                if self.song in self.dict:
+                    self.dict[self.song][0].setText("Play")
 
     def player_state(self, state):
         if state == 0:
@@ -357,25 +374,15 @@ class MyWindow(QtWidgets.QWidget):
     def make_page(self, index):
         if (self.current_index != 1) and (index == 1):
             self.current_index = 1
-            
-            self.choose_dir_btn.hide()
 
-            self.art.show()
-            self.song_title.show()
-            self.artist.show()
-            self.qsl.show()
-            self.repeat_btn.show()
+            self.container2.hide()
+            self.container.show()
         
         if (self.current_index != 2) and (index == 2):
             self.current_index = 2
 
-            self.art.hide()
-            self.song_title.hide()
-            self.artist.hide()
-            self.qsl.hide()
-            self.repeat_btn.hide()
-
-            self.choose_dir_btn.show()
+            self.container.hide()
+            self.container2.show()
 
 
 if __name__ == '__main__':
